@@ -1,6 +1,10 @@
 use std::{env, fs};
+use std::collections::{BTreeMap, HashMap};
 use std::process::exit;
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use log::error;
+use mc_schem::schem::{Schematic, WorldEdit13SaveOption};
+use mc_schem::{error, Block, Region};
 
 fn main() {
 
@@ -22,11 +26,29 @@ fn main() {
         }
     };
 
-    let instructions = file.split("\n");
+    let instructions: Vec<String> = file.split("\n").map(|s| s.to_string()).collect();
+    let mut instructions: Vec<(usize, &String)> = instructions.iter().enumerate().collect();
+    let mut line = 0;
+    let mut labels: HashMap<String, usize> = HashMap::new();
+    instructions.retain(|(_, s)| {
+        let mut blank = s.trim().len() == 0;
+        if s.trim().starts_with("#") {
+            blank = true;
+        }
+        let is_label = s.trim().starts_with(":");
+        if !blank {
+            if is_label {
+                labels.insert(s.to_string()[1..].trim().to_string(), line);
+            } else {
+                line += 1;
+            }
+        }
+        !blank && !is_label
+    });
 
     let mut hex_code: Vec<i16> = Vec::new();
 
-    for (index, instruction) in instructions.enumerate() {
+    for (index, instruction) in instructions {
         let line = index + 1;
         let words: Vec<&str> = instruction.split(" ").map(|s| s).collect();
         if words.first().is_none() {
@@ -35,7 +57,7 @@ fn main() {
         let hex: i16;
         match words.first().unwrap().to_uppercase().trim() {
             "NOP" => {
-                hex = 0 << 12;
+                hex = 0;
             }
             "LOAD" => {
                 hex = (1 << 12) | (get_reg(&words, 1, line) << 9) | (get_reg(&words, 2, line) << 3);
@@ -76,7 +98,7 @@ fn main() {
                 hex = (10 << 12) | (get_reg(&words, 1, line) << 6);
             }
             "SET" => {
-                hex = (11 << 12) | (get_reg(&words, 1, line) << 9) | (get_immediate(&words, 2, line) << 0);
+                hex = (11 << 12) | (get_reg(&words, 1, line) << 9) | get_imm_or_label(&words, 2, line, &labels);
             }
             "RET" => {
                 hex = 12 << 12
@@ -84,26 +106,105 @@ fn main() {
             "SFT" => {
                 hex = (13 << 12) | (get_reg(&words, 1, line) << 9) | (get_reg(&words, 2, line) << 6) | (get_reg(&words, 4, line) << 3) | (get_sft_op(&words, 3, line) << 1);
             }
-            "IO" => {
-                hex = (14 << 12) | (get_reg(&words, 1, line) << 9);
+            "IN" => {
+                hex = (14 << 12) | (get_reg(&words, 1, line) << 9) | (get_immediate(&words, 2, line) << 6);
+            }
+            "OUT" => {
+                hex = (14 << 12) | (get_reg(&words, 1, line) << 9) | (get_immediate(&words, 2, line) << 6) | 1 << 5;
             }
             "HALT" => {
                 hex = 15 << 12;
             }
-            instr => {
-                unknown_instruction_error(instr, line);
+            operation => {
+                unknown_instruction_error(operation, line);
             }
         }
         hex_code.push(hex);
     }
 
+    let mut clipboard = String::new();
+
     for h in hex_code {
         print!("0b");
+        clipboard.push_str(&*"0b".to_string());
         for bit in (0..16).rev().map(|n| (h >> n) & 1) {
             print!("{}", bit);
+            clipboard.push_str(&*format!("{}", bit).to_string());
         };
         println!();
+        clipboard.push_str("\n");
     }
+    if ClipboardContext::new().unwrap().set_contents(clipboard).is_err() {
+        error!("Unable to save to clipboard.")
+    }
+
+    match env::var("SCHEM") {
+        Ok(file) => {
+
+            let offset_x = match env::var("OFFSET_X") {
+                Ok(x) => x,
+                Err(_) => {
+                    error!("No x offset (OFFSET_X) for schematic specified.");
+                    exit(1);
+                }
+            };
+            let offset_y = match env::var("OFFSET_Y") {
+                Ok(y) => y,
+                Err(_) => {
+                    error!("No y offset (OFFSET_Y) for schematic specified.");
+                    exit(1);
+                }
+            };
+
+            let mut schem = Schematic::new();
+
+            let block = Block {
+                id: "minecraft:barrel".to_string(),
+                namespace: "".to_string(),
+                attributes: BTreeMap::new()
+            };
+
+            let mut region = Region::with_shape([5,5,5]);
+            let _ = region.set_block([0, 1, 0], &block);
+
+            schem.regions.push(region);
+
+            let _ = schem.save_world_edit_13_file(&file, &WorldEdit13SaveOption::default());
+            
+
+        },
+        Err(_) => ()
+    }
+    
+}
+
+fn get_imm_or_label(words: &Vec<&str>, argument: usize, line: usize, labels: &HashMap<String, usize>) -> i16 {
+    let arg = get_arg(words, argument, line);
+    let is_number = match arg.parse::<i32>() {
+        Ok(_) => true,
+        Err(_) => false
+    };
+    return if is_number {
+        get_immediate(words, argument, line)
+    } else {
+        get_label(words, argument, line, &labels)
+    }
+}
+
+fn get_label(words: &Vec<&str>, argument: usize, line: usize, labels: &HashMap<String, usize>) -> i16 {
+    let arg = get_arg(words, argument, line);
+    let address = match labels.get(&arg) {
+        Some(address) => *address,
+        None => {
+            error!("Undefined label: {} in line {}", arg, line);
+            exit(1);
+        }
+    };
+    if address > 127 {
+        error!("Label out of range: {} in line {}. Must be 0 <= imm <= 127", arg, line);
+        exit(1);
+    }
+    return address as i16;
 }
 
 fn get_sft_op(words: &Vec<&str>, argument: usize, line: usize) -> i16 {

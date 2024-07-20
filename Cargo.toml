@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 log = "0.4.21"
 env_logger = "0.11.3"
+cli-clipboard = "0.4.0"
+mc_schem = "1.1.2"
