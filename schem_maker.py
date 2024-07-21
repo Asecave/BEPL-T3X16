@@ -67,4 +67,4 @@ for x in range(3):
         schem.setBlock((x * offset_x, 4, z * offset_z), create_signal_strength_barrel(0))
         schem.setBlock((x * offset_x, 6, z * offset_z), create_signal_strength_barrel(0))
 
-schem.save("C:/Users/Asecave/AppData/Roaming/ATLauncher/instances/SurvivalTweaked1204/config/worldedit/schematics", "rom", mcschematic.Version.JE_1_20_1)
+schem.save(".", "rom", mcschematic.Version.JE_1_20_1)
