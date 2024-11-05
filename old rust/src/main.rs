@@ -4,7 +4,7 @@ use std::process::exit;
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use log::error;
 use mc_schem::schem::{Schematic, WorldEdit13SaveOption};
-use mc_schem::{error, Block, Region};
+use mc_schem::{Block, Region};
 
 fn main() {
 
@@ -141,14 +141,14 @@ fn main() {
     match env::var("SCHEM") {
         Ok(file) => {
 
-            let offset_x = match env::var("OFFSET_X") {
+            let _offset_x = match env::var("OFFSET_X") {
                 Ok(x) => x,
                 Err(_) => {
                     error!("No x offset (OFFSET_X) for schematic specified.");
                     exit(1);
                 }
             };
-            let offset_y = match env::var("OFFSET_Y") {
+            let _offset_y = match env::var("OFFSET_Y") {
                 Ok(y) => y,
                 Err(_) => {
                     error!("No y offset (OFFSET_Y) for schematic specified.");

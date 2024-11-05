@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'c_compiler'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=c_compiler",
+                    "--package=c_compiler"
+                ],
+                "filter": {
+                    "name": "c_compiler",
+                    "kind": "bin"
+                }
+            },
+            "args": ["C:/Users/Asecave/Documents/GitHub/BEPL-T3X16/c_compiler/Programs/single.s"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'c_compiler'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=c_compiler",
+                    "--package=c_compiler"
+                ],
+                "filter": {
+                    "name": "c_compiler",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
