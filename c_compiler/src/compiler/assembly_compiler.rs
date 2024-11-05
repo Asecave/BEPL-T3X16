@@ -1,131 +1,139 @@
 use std::collections::HashMap;
 
-pub fn compile_assembly(raw_assembly: &str) -> Vec<i16> {
-    let mut instructions: Vec<_> = raw_assembly.split("\n").enumerate().collect();
-    let mut line = 0;
-    let mut labels: HashMap<String, usize> = HashMap::new();
+pub struct AssemblyCompiler;
 
-    instructions.retain(|(_, s)| {
-        let trimmed = s.trim();
+impl super::Compiler for AssemblyCompiler {
+    fn compile(&self, raw_code: &str) -> Vec<i16> {
+        let mut instructions: Vec<_> = raw_code.split("\n").enumerate().collect();
+        let mut line = 0;
+        let mut labels: HashMap<String, usize> = HashMap::new();
 
-        if trimmed.len() == 0 || trimmed.starts_with("#") {
-            return false;
-        }
+        instructions.retain(|(_, s)| {
+            let trimmed = s.trim();
 
-        if trimmed.starts_with(":") {
-            labels.insert(s[1..].trim().to_string(), line);
-            return false;
-        }
-        line += 1;
-        true
-    });
+            if trimmed.is_empty() || trimmed.starts_with("#") {
+                return false;
+            }
 
-    let mut hex_code: Vec<i16> = Vec::new();
+            if trimmed.starts_with(":") {
+                labels.insert(s[1..].trim().to_string(), line);
+                return false;
+            }
+            line += 1;
+            true
+        });
 
-    for (index, instruction) in instructions {
-        let line = index + 1;
-        let words: Vec<&str> = instruction.split_ascii_whitespace().collect();
+        let mut hex_code: Vec<i16> = Vec::new();
 
-        let hex: i16;
-        match words.first().unwrap().to_uppercase().trim() {
-            "NOP" => {
-                hex = 0;
-            }
-            "LOAD" => {
-                hex = (1 << 12) | (get_reg(&words, 1, line) << 9) | (get_reg(&words, 2, line) << 3);
-            }
-            "STORE" => {
-                hex = (2 << 12) | (get_reg(&words, 1, line) << 6) | (get_reg(&words, 2, line) << 3);
-            }
-            "ADD" => {
-                hex = (3 << 12)
-                    | (get_reg(&words, 1, line) << 9)
-                    | (get_reg(&words, 2, line) << 6)
-                    | (get_reg(&words, 3, line) << 3);
-            }
-            "ADDI" => {
-                hex = (4 << 12)
-                    | (get_reg(&words, 1, line) << 9)
-                    | (get_immediate(&words, 2, line) << 0);
-            }
-            "SUB" => {
-                hex = (5 << 12)
-                    | (get_reg(&words, 1, line) << 9)
-                    | (get_reg(&words, 2, line) << 6)
-                    | (get_reg(&words, 3, line) << 3);
-            }
-            "AND" => {
-                hex = (6 << 12)
-                    | (get_reg(&words, 1, line) << 9)
-                    | (get_reg(&words, 2, line) << 6)
-                    | (get_reg(&words, 3, line) << 3);
-            }
-            "XOR" => {
-                hex = (7 << 12)
-                    | (get_reg(&words, 1, line) << 9)
-                    | (get_reg(&words, 2, line) << 6)
-                    | (get_reg(&words, 3, line) << 3);
-            }
-            "J" => {
-                if words.len() == 2 {
-                    hex = (8 << 12) | (get_reg(&words, 1, line) << 9);
-                } else {
-                    hex = (8 << 12)
+        for (index, instruction) in instructions {
+            let line = index + 1;
+            let words: Vec<&str> = instruction.split_ascii_whitespace().collect();
+
+            let hex: i16;
+            match words.first().unwrap().to_uppercase().trim() {
+                "NOP" => {
+                    hex = 0;
+                }
+                "LOAD" => {
+                    hex = (1 << 12)
+                        | (get_reg(&words, 1, line) << 9)
+                        | (get_reg(&words, 2, line) << 3);
+                }
+                "STORE" => {
+                    hex = (2 << 12)
+                        | (get_reg(&words, 1, line) << 6)
+                        | (get_reg(&words, 2, line) << 3);
+                }
+                "ADD" => {
+                    hex = (3 << 12)
+                        | (get_reg(&words, 1, line) << 9)
+                        | (get_reg(&words, 2, line) << 6)
+                        | (get_reg(&words, 3, line) << 3);
+                }
+                "ADDI" => {
+                    hex = (4 << 12)
+                        | (get_reg(&words, 1, line) << 9)
+                        | get_immediate(&words, 2, line);
+                }
+                "SUB" => {
+                    hex = (5 << 12)
+                        | (get_reg(&words, 1, line) << 9)
+                        | (get_reg(&words, 2, line) << 6)
+                        | (get_reg(&words, 3, line) << 3);
+                }
+                "AND" => {
+                    hex = (6 << 12)
+                        | (get_reg(&words, 1, line) << 9)
+                        | (get_reg(&words, 2, line) << 6)
+                        | (get_reg(&words, 3, line) << 3);
+                }
+                "XOR" => {
+                    hex = (7 << 12)
+                        | (get_reg(&words, 1, line) << 9)
+                        | (get_reg(&words, 2, line) << 6)
+                        | (get_reg(&words, 3, line) << 3);
+                }
+                "J" => {
+                    if words.len() == 2 {
+                        hex = (8 << 12) | (get_reg(&words, 1, line) << 9);
+                    } else {
+                        hex = (8 << 12)
+                            | (get_reg(&words, 1, line) << 9)
+                            | (get_reg(&words, 2, line) << 6)
+                            | (get_reg(&words, 4, line) << 3)
+                            | (get_flag(&words, 3, line) << 1);
+                    }
+                }
+                "JAL" => {
+                    if words.len() == 2 {
+                        hex = (9 << 12) | (get_reg(&words, 1, line) << 9);
+                    } else {
+                        hex = (9 << 12)
+                            | (get_reg(&words, 1, line) << 9)
+                            | (get_reg(&words, 2, line) << 6)
+                            | (get_reg(&words, 4, line) << 3)
+                            | (get_flag(&words, 3, line) << 1);
+                    }
+                }
+                "SSP" => {
+                    hex = (10 << 12) | (get_reg(&words, 1, line) << 6);
+                }
+                "SET" => {
+                    hex = (11 << 12)
+                        | (get_reg(&words, 1, line) << 9)
+                        | get_imm_or_label(&words, 2, line, &labels);
+                }
+                "RET" => hex = 12 << 12,
+                "SFT" => {
+                    hex = (13 << 12)
                         | (get_reg(&words, 1, line) << 9)
                         | (get_reg(&words, 2, line) << 6)
                         | (get_reg(&words, 4, line) << 3)
-                        | (get_flag(&words, 3, line) << 1);
+                        | (get_sft_op(&words, 3, line) << 1);
                 }
-            }
-            "JAL" => {
-                if words.len() == 2 {
-                    hex = (9 << 12) | (get_reg(&words, 1, line) << 9);
-                } else {
-                    hex = (9 << 12)
+                "IN" => {
+                    hex = (14 << 12)
                         | (get_reg(&words, 1, line) << 9)
-                        | (get_reg(&words, 2, line) << 6)
-                        | (get_reg(&words, 4, line) << 3)
-                        | (get_flag(&words, 3, line) << 1);
+                        | (get_immediate(&words, 2, line) << 6);
+                }
+                "OUT" => {
+                    hex = (14 << 12)
+                        | (get_reg(&words, 1, line) << 9)
+                        | (get_immediate(&words, 2, line) << 6)
+                        | 1 << 5;
+                }
+                "HALT" => {
+                    hex = 15 << 12;
+                }
+                operation => {
+                    panic!("{}", unknown_instruction_error(operation, line));
                 }
             }
-            "SSP" => {
-                hex = (10 << 12) | (get_reg(&words, 1, line) << 6);
-            }
-            "SET" => {
-                hex = (11 << 12)
-                    | (get_reg(&words, 1, line) << 9)
-                    | get_imm_or_label(&words, 2, line, &labels);
-            }
-            "RET" => hex = 12 << 12,
-            "SFT" => {
-                hex = (13 << 12)
-                    | (get_reg(&words, 1, line) << 9)
-                    | (get_reg(&words, 2, line) << 6)
-                    | (get_reg(&words, 4, line) << 3)
-                    | (get_sft_op(&words, 3, line) << 1);
-            }
-            "IN" => {
-                hex = (14 << 12)
-                    | (get_reg(&words, 1, line) << 9)
-                    | (get_immediate(&words, 2, line) << 6);
-            }
-            "OUT" => {
-                hex = (14 << 12)
-                    | (get_reg(&words, 1, line) << 9)
-                    | (get_immediate(&words, 2, line) << 6)
-                    | 1 << 5;
-            }
-            "HALT" => {
-                hex = 15 << 12;
-            }
-            operation => {
-                panic!("{}", unknown_instruction_error(operation, line));
-            }
+            hex_code.push(hex);
         }
-        hex_code.push(hex);
+
+        hex_code
     }
-
-    return hex_code;
 }
 
 fn get_imm_or_label(
@@ -134,11 +142,11 @@ fn get_imm_or_label(
     line: usize,
     labels: &HashMap<String, usize>,
 ) -> i16 {
-    return if get_arg(words, argument, line).parse::<i32>().is_ok() {
+    if get_arg(words, argument, line).parse::<i32>().is_ok() {
         get_immediate(words, argument, line)
     } else {
         get_label(words, argument, line, labels)
-    };
+    }
 }
 
 fn get_label(
@@ -150,7 +158,7 @@ fn get_label(
     let arg = get_arg(words, argument, line);
     let address = *labels
         .get(&arg)
-        .expect(format!("Undefined label: {} in line {}", arg, line).as_str());
+        .unwrap_or_else(|| panic!("Undefined label: {} in line {}", arg, line));
     assert!(
         address <= 127,
         "{}",
@@ -160,16 +168,16 @@ fn get_label(
         )
     );
 
-    return address as i16;
+    address as i16
 }
 
 fn get_sft_op(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
     let arg = get_arg(words, argument, line);
     match arg.as_str() {
-        "<<" => return 0,
-        "<<<" => return 0,
-        ">>" => return 2,
-        ">>>" => return 1,
+        "<<" => 0,
+        "<<<" => 0,
+        ">>" => 2,
+        ">>>" => 1,
         flag => {
             panic!(
                 "{}",
@@ -182,9 +190,9 @@ fn get_sft_op(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
 fn get_flag(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
     let arg = get_arg(words, argument, line);
     match arg.as_str() {
-        "<" => return 1,
-        "=" => return 2,
-        ">" => return 3,
+        "<" => 1,
+        "=" => 2,
+        ">" => 3,
         flag => {
             panic!("{}", format!("Unknown flag: {} in line {}", flag, line));
         }
@@ -195,7 +203,7 @@ fn get_immediate(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
     let arg = get_arg(words, argument, line);
     let num = arg
         .parse::<i32>()
-        .expect(unknown_argument_error(&arg, line).as_str());
+        .unwrap_or_else(|_| panic!("{}", unknown_argument_error(&arg, line)));
 
     assert!(
         num >= -128 || num <= 127,
@@ -206,7 +214,7 @@ fn get_immediate(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
         )
     );
 
-    return (num & 255) as i16;
+    (num & 255) as i16
 }
 
 fn get_reg(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
@@ -216,7 +224,7 @@ fn get_reg(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
     let num = String::from_utf8(vec![arg.as_bytes()[1]])
         .unwrap()
         .parse::<i16>()
-        .expect(unknown_argument_error(&arg, line).as_str());
+        .unwrap_or_else(|_| panic!("{}", unknown_argument_error(&arg, line)));
     assert!(
         num < 8,
         "{}",
@@ -231,7 +239,7 @@ fn get_reg(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
 fn get_arg(words: &Vec<&str>, argument: usize, line: usize) -> String {
     let arg = words
         .get(argument)
-        .expect(&missing_argument_error(argument, line));
+        .unwrap_or_else(|| panic!("{}", missing_argument_error(argument, line)));
     arg.trim().to_string()
 }
 

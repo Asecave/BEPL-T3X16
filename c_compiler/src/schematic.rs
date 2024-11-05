@@ -1,6 +1,9 @@
 use std::{cmp::min, fs::File, io::Write};
 
-use quartz_nbt::{io::{write_nbt, Flavor}, NbtCompound, NbtList};
+use quartz_nbt::{
+    io::{write_nbt, Flavor},
+    NbtCompound, NbtList,
+};
 
 const BARREL_OFFSET_X: i16 = 4;
 const BARREL_OFFSET_Y: i16 = 2;
@@ -22,10 +25,13 @@ pub fn create_rom_schematic(hex_code: &Vec<i16>) {
         let mut z: i16 = 0;
         for instruction in hex_code {
             let signal_strength = (*instruction as u16 >> (part * 4)) % 16;
-            block_entities.push(create_signal_strength_barrel(signal_strength as usize, vec![x as i32, y as i32, z as i32]));
+            block_entities.push(create_signal_strength_barrel(
+                signal_strength as usize,
+                vec![x as i32, y as i32, z as i32],
+            ));
             data[(x + z * width + y * width * length) as usize] = 0;
             x += BARREL_OFFSET_X;
-            if x > width  {
+            if x > width {
                 z += BARREL_OFFSET_Z;
                 x = 0;
             }
@@ -39,7 +45,6 @@ pub fn create_rom_schematic(hex_code: &Vec<i16>) {
 }
 
 fn write_nbt_to_file(nbt: NbtCompound, path: &str) {
-
     let mut buf: Vec<u8> = Vec::new();
     write_nbt(&mut buf, None, &nbt, Flavor::GzCompressed).unwrap();
 
@@ -48,7 +53,9 @@ fn write_nbt_to_file(nbt: NbtCompound, path: &str) {
 }
 
 fn create_signal_strength_barrel(signal_strength: usize, pos: Vec<i32>) -> NbtCompound {
-    let mut items = vec![0, 1, 124, 247, 371, 494, 618, 741, 864, 988, 1111, 1235, 1358, 1482, 1605, 1728][signal_strength];
+    let mut items = vec![
+        0, 1, 124, 247, 371, 494, 618, 741, 864, 988, 1111, 1235, 1358, 1482, 1605, 1728,
+    ][signal_strength];
     let stacks = items / 64;
     let rest = items % 64;
     let slots_used = stacks + min(rest, 1);
@@ -57,7 +64,7 @@ fn create_signal_strength_barrel(signal_strength: usize, pos: Vec<i32>) -> NbtCo
     let mut data = NbtCompound::new();
 
     let mut item_list = NbtList::with_capacity(slots_used);
-    
+
     let mut slot: i8 = 0;
     while items != 0 {
         let mut stack = NbtCompound::new();
@@ -81,7 +88,13 @@ fn create_signal_strength_barrel(signal_strength: usize, pos: Vec<i32>) -> NbtCo
     barrel
 }
 
-fn create_schematic_nbt(width: i16, length: i16, height: i16, block_entities: NbtList, data: Vec<i8>) -> NbtCompound {
+fn create_schematic_nbt(
+    width: i16,
+    length: i16,
+    height: i16,
+    block_entities: NbtList,
+    data: Vec<i8>,
+) -> NbtCompound {
     let mut base_nbt = NbtCompound::new();
     let mut schematic = NbtCompound::new();
     let mut blocks = NbtCompound::new();

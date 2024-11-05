@@ -1,13 +1,12 @@
 use std::{env, fs::read_to_string};
 
-mod schematic;
-mod compiler;
+use compiler::Compiler;
 
-use crate::compiler::Compiler;
+mod compiler;
+mod schematic;
 
 fn main() {
-    
-    let compiler = compiler::CCompiler;
+    let compiler: Box<dyn Compiler> = Box::new(compiler::AssemblyCompiler);
 
     let source_file = env::args().last().expect("No source file specified");
     let raw_assembly = read_to_string(source_file).expect("Could not read file");
