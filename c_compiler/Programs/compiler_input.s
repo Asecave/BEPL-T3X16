@@ -1,10 +1,7 @@
 # load and store
 set x0 10
 set x1 1
-set x2 0
-set x3 2
 store x1 x0
-store x3 x2
 load x2 x0
 out x2 0
 

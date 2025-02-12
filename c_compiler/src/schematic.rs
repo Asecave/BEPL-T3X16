@@ -9,7 +9,7 @@ const BARREL_OFFSET_X: i16 = 4;
 const BARREL_OFFSET_Y: i16 = 2;
 const BARREL_OFFSET_Z: i16 = 3;
 
-pub fn create_rom_schematic(hex_code: &Vec<i16>) {
+pub fn create_rom_schematic(hex_code: &Vec<u16>) {
     let lines: i16 = hex_code.len() as i16;
 
     let width: i16 = min(lines, 16) * BARREL_OFFSET_X - BARREL_OFFSET_X + 1;
@@ -24,7 +24,7 @@ pub fn create_rom_schematic(hex_code: &Vec<i16>) {
         let mut x: i16 = 0;
         let mut z: i16 = 0;
         for instruction in hex_code {
-            let signal_strength = (*instruction as u16 >> (part * 4)) % 16;
+            let signal_strength = (*instruction >> (part * 4)) % 16;
             block_entities.push(create_signal_strength_barrel(
                 signal_strength as usize,
                 vec![x as i32, y as i32, z as i32],

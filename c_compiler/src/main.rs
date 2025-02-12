@@ -4,22 +4,28 @@ use compiler::Compiler;
 
 mod compiler;
 mod schematic;
+mod simulator;
 
 fn main() {
-    let compiler: Box<dyn Compiler> = Box::new(compiler::AssemblyCompiler);
+    let compiler: Box<dyn Compiler> = match env::args().any(|arg| arg == "--asm") {
+        true => Box::new(compiler::AssemblyCompiler),
+        false => Box::new(compiler::CCompiler),
+    };
 
     let source_file = env::args().last().expect("No source file specified");
     let raw_assembly = read_to_string(source_file).expect("Could not read file");
 
     let hex_code = compiler.compile(&raw_assembly);
 
-    let binary = hex_code_to_binary(&hex_code);
-    println!("{}", binary);
+    // let binary = hex_code_to_binary(&hex_code);
+    // println!("{}", binary);
 
-    schematic::create_rom_schematic(&hex_code);
+    // schematic::create_rom_schematic(&hex_code);
+
+    simulator::simulate(&hex_code);
 }
 
-fn hex_code_to_binary(hex_code: &Vec<i16>) -> String {
+fn hex_code_to_binary(hex_code: &Vec<u16>) -> String {
     hex_code
         .iter()
         .map(|code| format!("{:#018b}", code))

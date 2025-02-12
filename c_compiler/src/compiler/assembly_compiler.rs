@@ -3,7 +3,7 @@ use std::collections::HashMap;
 pub struct AssemblyCompiler;
 
 impl super::Compiler for AssemblyCompiler {
-    fn compile(&self, raw_code: &str) -> Vec<i16> {
+    fn compile(&self, raw_code: &str) -> Vec<u16> {
         let mut instructions: Vec<_> = raw_code.split("\n").enumerate().collect();
         let mut line = 0;
         let mut labels: HashMap<String, usize> = HashMap::new();
@@ -23,13 +23,13 @@ impl super::Compiler for AssemblyCompiler {
             true
         });
 
-        let mut hex_code: Vec<i16> = Vec::new();
+        let mut hex_code: Vec<u16> = Vec::new();
 
         for (index, instruction) in instructions {
             let line = index + 1;
             let words: Vec<&str> = instruction.split_ascii_whitespace().collect();
 
-            let hex: i16;
+            let hex: u16;
             match words.first().unwrap().to_uppercase().trim() {
                 "NOP" => {
                     hex = 0;
@@ -141,7 +141,7 @@ fn get_imm_or_label(
     argument: usize,
     line: usize,
     labels: &HashMap<String, usize>,
-) -> i16 {
+) -> u16 {
     if get_arg(words, argument, line).parse::<i32>().is_ok() {
         get_immediate(words, argument, line)
     } else {
@@ -154,7 +154,7 @@ fn get_label(
     argument: usize,
     line: usize,
     labels: &HashMap<String, usize>,
-) -> i16 {
+) -> u16 {
     let arg = get_arg(words, argument, line);
     let address = *labels
         .get(&arg)
@@ -168,10 +168,10 @@ fn get_label(
         )
     );
 
-    address as i16
+    address as u16
 }
 
-fn get_sft_op(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
+fn get_sft_op(words: &Vec<&str>, argument: usize, line: usize) -> u16 {
     let arg = get_arg(words, argument, line);
     match arg.as_str() {
         "<<" => 0,
@@ -187,7 +187,7 @@ fn get_sft_op(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
     }
 }
 
-fn get_flag(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
+fn get_flag(words: &Vec<&str>, argument: usize, line: usize) -> u16 {
     let arg = get_arg(words, argument, line);
     match arg.as_str() {
         "<" => 1,
@@ -199,7 +199,7 @@ fn get_flag(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
     }
 }
 
-fn get_immediate(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
+fn get_immediate(words: &Vec<&str>, argument: usize, line: usize) -> u16 {
     let arg = get_arg(words, argument, line);
     let num = arg
         .parse::<i32>()
@@ -214,17 +214,17 @@ fn get_immediate(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
         )
     );
 
-    (num & 255) as i16
+    (num & 255) as u16
 }
 
-fn get_reg(words: &Vec<&str>, argument: usize, line: usize) -> i16 {
+fn get_reg(words: &Vec<&str>, argument: usize, line: usize) -> u16 {
     let arg = get_arg(words, argument, line);
     assert!(arg.len() == 2, "{}", unknown_argument_error(&arg, line));
 
     let num = String::from_utf8(vec![arg.as_bytes()[1]])
         .unwrap()
         .parse::<i16>()
-        .unwrap_or_else(|_| panic!("{}", unknown_argument_error(&arg, line)));
+        .unwrap_or_else(|_| panic!("{}", unknown_argument_error(&arg, line))) as u16;
     assert!(
         num < 8,
         "{}",

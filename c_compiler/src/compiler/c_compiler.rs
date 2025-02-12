@@ -3,8 +3,8 @@ use crate::Compiler;
 pub struct CCompiler;
 
 impl Compiler for CCompiler {
-    fn compile(&self, raw_code: &str) -> Vec<i16> {
-        vec![0i16, 1i16, 2i16]
+    fn compile(&self, raw_code: &str) -> Vec<u16> {
+        vec![0u16, 1u16, 2u16]
     }
 }
 
