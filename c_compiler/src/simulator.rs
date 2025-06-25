@@ -103,7 +103,7 @@ pub fn simulate(hex_code: &Vec<u16>) {
                         pc = (reg[((instr & TARGET_MSK) >> TARGET_POS) as usize] - 1) as usize;
                     } else if flag == 1 && a < b {
                         pc = (reg[((instr & TARGET_MSK) >> TARGET_POS) as usize] - 1) as usize;
-                    } else if a > b {
+                    } else if flag == 3 && a > b {
                         pc = (reg[((instr & TARGET_MSK) >> TARGET_POS) as usize] - 1) as usize;
                     }
                 }
@@ -111,7 +111,7 @@ pub fn simulate(hex_code: &Vec<u16>) {
             JAL => {
                 let flag = (instr & FLAG_MSK) >> FLAG_POS;
                 if flag == 0 {
-                    memory[sp] = (pc + 1) as i16;
+                    memory[sp] = pc as i16;
                     sp += 1;
                     pc = (reg[((instr & TARGET_MSK) >> TARGET_POS) as usize] - 1) as usize;
                 } else {
@@ -163,7 +163,8 @@ pub fn simulate(hex_code: &Vec<u16>) {
                 if (instr & R_W_MSK) >> R_W_POS == 0 {
                     reg[((instr & DATA_MSK) >> DATA_POS) as usize] = io[((instr & DEV_MSK) >> DEV_POS) as usize];
                 } else {
-                    io[((instr & DEV_MSK) >> DEV_POS) as usize] = reg[((instr & DATA_MSK) >> DATA_POS) as usize]
+                    io[((instr & DEV_MSK) >> DEV_POS) as usize] = reg[((instr & DATA_MSK) >> DATA_POS) as usize];
+                    println!("{}", io[((instr & DEV_MSK) >> DEV_POS) as usize]);
                 }
             },
             HALT => {
@@ -174,6 +175,4 @@ pub fn simulate(hex_code: &Vec<u16>) {
 
         pc += 1;
     }
-
-    dbg!(io);
 }

@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Debug",
             "program": "${workspaceFolder}/c_compiler/target/debug/c_compiler.exe",
-            "args": ["--asm", "C:\\Users\\Asecave\\Documents\\GitHub\\BEPL-T3X16\\c_compiler\\Programs\\compiler_input.s"],
+            "args": ["--asm", "C:\\Users\\Asecave\\Documents\\GitHub\\BEPL-T3X16\\c_compiler\\Programs\\find_primes.s"],
             "cwd": "${workspaceFolder}"
         }
     ]
